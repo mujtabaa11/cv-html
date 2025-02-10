@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch ALL commit history to avoid SHA conflicts
+          fetch-depth: 0
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -34,22 +34,33 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v36
+        uses: tj-actions/changed-files@v36 # Or latest
         with:
-          json: true
-          # Compare against the PREVIOUS commit (before the push)
-          base_sha: ${{ github.event.before || 'HEAD^' }}  # Fallback to HEAD^ if before is empty
-          sha: ${{ github.sha }}  # Current commit
+          format: json
+          base_sha: ${{ github.event.before || 'HEAD^' }}
+          sha: ${{ github.sha }}
 
       - name: Invalidate CloudFront Cache
         if: steps.changed-files.outputs.all_changed_files != '[]'
         run: |
-          echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          # Use jq to safely parse JSON array
-          CHANGED_PATHS=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | jq -r '.[]')
+          echo "Changed Files (JSON): ${{ steps.changed-files.outputs.all_changed_files }}"
+          echo "Changed Files (Count): ${{ steps.changed-files.outputs.all_changed_files_count }}"
+
+          # Improved jq command to handle spaces and special characters safely
+          CHANGED_PATHS=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | jq -r '.[] | @json')
+
+          # Construct the invalidation batch JSON directly
+          INVALIDATION_BATCH='{ "Paths": { "Quantity": ${{ steps.changed-files.outputs.all_changed_files_count }}, "Items": [${{ env.CHANGED_PATHS }}] } }'
+
+          echo "Invalidation Batch: $INVALIDATION_BATCH"  # Debugging
+
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths $CHANGED_PATHS
+            --invalidation-batch "$INVALIDATION_BATCH"  # Use --invalidation-batch
+
+        env:
+          CHANGED_PATHS: ''
+
       - name: Debug Commit SHAs
         run: |
           echo "Previous SHA (github.event.before): ${{ github.event.before }}"
