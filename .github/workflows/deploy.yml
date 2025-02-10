@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history - Fixes the main issue
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -32,17 +34,16 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v36 # Or latest version (v36 or above)
+        uses: tj-actions/changed-files@v36 # Or latest version
         with:
-          format: json # Now with format: json, it will output valid JSON
-          sha: ${{ github.event.before }} # Essential: Specify the base SHA
+          format: json
+          sha: ${{ github.event.before }}
 
       - name: Invalidate CloudFront Cache
         if: steps.changed-files.outputs.all_changed_files != '[]'
         run: |
           echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          # jq is used to properly format the JSON for the AWS CLI
           CHANGED_FILES=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq -r '. | .[] | @json')
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --invalidation-batch '{ "Paths": { "Quantity": ${{ steps.changed-files.outputs.all_changed_files_count }}, "Items": [${{ env.CHANGED_FILES }}] } }'
         env:
-          CHANGED_FILES: '' # Initialize the environment variable
+          CHANGED_FILES: ''
