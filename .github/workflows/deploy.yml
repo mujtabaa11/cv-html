@@ -20,7 +20,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: $ {{ secrets.IAM_ACCESS_ROLE }}
+          role-to-assume: arn:aws:iam::307946668157:role/cv-html-repo-accessRole
           aws-region: us-east-1
 
       - name: Debug AWS Identity
