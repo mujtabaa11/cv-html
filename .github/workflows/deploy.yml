@@ -32,12 +32,17 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35 # Or latest version
+        uses: tj-actions/changed-files@v36 # Or latest version (v36 or above)
         with:
-          format: json # Get a JSON list of changed files
+          format: json # Now with format: json, it will output valid JSON
+          sha: ${{ github.event.before }} # Essential: Specify the base SHA
 
       - name: Invalidate CloudFront Cache
-        if: steps.changed-files.outputs.all_changed_files != '[]' # Only run if files changed
+        if: steps.changed-files.outputs.all_changed_files != '[]'
         run: |
-          echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}" # Debugging
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --invalidation-batch '{ "Paths": { "Quantity": ${{ steps.changed-files.outputs.all_changed_files_count }}, "Items": ${{ steps.changed-files.outputs.all_changed_files }} } }'
+          echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}"
+          # jq is used to properly format the JSON for the AWS CLI
+          CHANGED_FILES=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq -r '. | .[] | @json')
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --invalidation-batch '{ "Paths": { "Quantity": ${{ steps.changed-files.outputs.all_changed_files_count }}, "Items": [${{ env.CHANGED_FILES }}] } }'
+        env:
+          CHANGED_FILES: '' # Initialize the environment variable
