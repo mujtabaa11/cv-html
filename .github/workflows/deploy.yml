@@ -1,24 +1,3 @@
-Skip to content
-Navigation Menu
-mujtabaa11
-cv-html
-
-Type / to search
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security
-Insights
-Settings
-Deploy to S3
-Update deploy.yml #3
-Jobs
-Run details
-Workflow file for this run
-.github/workflows/deploy.yml at 6ee4c3e
 name: Deploy to S3
 
 on:
