@@ -25,7 +25,19 @@ jobs:
 
       - name: Debug AWS Identity
         run: aws sts get-caller-identity
-      
+
       - name: Deploy to S3
         run: |
           aws s3 sync . s3://mohamedmujtaba --delete
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35 # Or latest version
+        with:
+          format: json # Get a JSON list of changed files
+
+      - name: Invalidate CloudFront Cache
+        if: steps.changed-files.outputs.all_changed_files != '[]' # Only run if files changed
+        run: |
+          echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}" # Debugging
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --invalidation-batch '{ "Paths": { "Quantity": ${{ steps.changed-files.outputs.all_changed_files_count }}, "Items": ${{ steps.changed-files.outputs.all_changed_files }} } }'
