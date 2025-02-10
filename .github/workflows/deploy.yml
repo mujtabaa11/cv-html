@@ -30,7 +30,9 @@ jobs:
 
       - name: Deploy to S3
         run: |
+          echo "Running aws s3 sync..."
           aws s3 sync . s3://mohamedmujtaba --delete
+          echo "aws s3 sync completed."
 
       - name: Get changed files
         id: changed-files
@@ -44,9 +46,17 @@ jobs:
       - name: Invalidate CloudFront Cache
         if: steps.changed-files.outputs.all_changed_files != '[]'
         run: |
-          echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          # Use jq to safely parse JSON array
+          set -ex
+          echo "Changed Files (raw JSON): ${{ steps.changed-files.outputs.all_changed_files }}"
+
+          # Validate JSON format
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq .
+
+          # Parse the changed paths using jq
           CHANGED_PATHS=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq -r '.[]')
+          echo "Paths to invalidate: $CHANGED_PATHS"
+
+          # Create CloudFront invalidation
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths $CHANGED_PATHS
