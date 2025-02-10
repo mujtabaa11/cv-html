@@ -29,4 +29,3 @@ jobs:
       - name: Deploy to S3
         run: |
           aws s3 sync . s3://mohamedmujtaba --delete
-Update deploy.yml · mujtabaa11/cv-html@6ee4c3e 
