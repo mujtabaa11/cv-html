@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history - Fixes the main issue
+          fetch-depth: 100 # Increased to fetch more commit history
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -34,16 +34,14 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v36 # Or latest version
+        uses: tj-actions/changed-files@v36
         with:
-          format: json
+          json: true # Corrected input for JSON output
           sha: ${{ github.event.before }}
 
       - name: Invalidate CloudFront Cache
         if: steps.changed-files.outputs.all_changed_files != '[]'
         run: |
           echo "Changed Files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          CHANGED_FILES=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq -r '. | .[] | @json')
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --invalidation-batch '{ "Paths": { "Quantity": ${{ steps.changed-files.outputs.all_changed_files_count }}, "Items": [${{ env.CHANGED_FILES }}] } }'
-        env:
-          CHANGED_FILES: ''
+          CHANGED_FILES=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | jq -r '.[]')
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "$CHANGED_FILES"
