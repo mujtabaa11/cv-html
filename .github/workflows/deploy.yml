@@ -1,3 +1,24 @@
+Skip to content
+Navigation Menu
+mujtabaa11
+cv-html
+
+Type / to search
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Settings
+Deploy to S3
+Update deploy.yml #3
+Jobs
+Run details
+Workflow file for this run
+.github/workflows/deploy.yml at 6ee4c3e
 name: Deploy to S3
 
 on:
@@ -16,8 +37,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch ALL commit history to avoid SHA conflicts
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -27,41 +46,8 @@ jobs:
 
       - name: Debug AWS Identity
         run: aws sts get-caller-identity
-
+      
       - name: Deploy to S3
         run: |
-          echo "Running aws s3 sync..."
           aws s3 sync . s3://mohamedmujtaba --delete
-          echo "aws s3 sync completed."
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v36
-        with:
-          json: true
-          # Compare against the PREVIOUS commit (before the push)
-          base_sha: ${{ github.event.before || 'HEAD^' }}  # Fallback to HEAD^ if before is empty
-          sha: ${{ github.sha }}  # Current commit
-
-      - name: Invalidate CloudFront Cache
-        if: steps.changed-files.outputs.all_changed_files != '[]'
-        run: |
-          set -ex
-          echo "Changed Files (raw JSON): ${{ steps.changed-files.outputs.all_changed_files }}"
-
-          # Validate JSON format
-          echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq .
-
-          # Parse the changed paths using jq
-          CHANGED_PATHS=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | jq -r '.[]')
-          echo "Paths to invalidate: $CHANGED_PATHS"
-
-          # Create CloudFront invalidation
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths $CHANGED_PATHS
-
-      - name: Debug Commit SHAs
-        run: |
-          echo "Previous SHA (github.event.before): ${{ github.event.before }}"
-          echo "Current SHA (github.sha): ${{ github.sha }}"
+Update deploy.yml · mujtabaa11/cv-html@6ee4c3e 
